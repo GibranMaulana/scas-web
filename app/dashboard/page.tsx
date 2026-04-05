@@ -1,14 +1,14 @@
 "use client";
 
-import { useGoogleAuth } from "@/hooks/useGoogleAuth";
+import { useAuthStore, type User } from "@/store/useAuthStore";
 
 export default function Page() {
-  const { handleLogout } = useGoogleAuth();
-
+  const user: User | null = useAuthStore((state) => state.user);
   return (
     <>
-      <div>logged in</div>
-      <button onClick={() => handleLogout()}> logout </button>
+      <div>logged in as {user?.name}</div>
+      <div>email: {user?.email}</div>
+      <div>role: {user?.role}</div>
     </>
   );
 }
