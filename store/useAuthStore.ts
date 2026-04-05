@@ -11,7 +11,7 @@ interface User {
 interface AuthState {
   token: string | null;
   user: User | null;
-  login: (token: string, user: User) => void;
+  login: (token: string | null, user: User | null) => void;
   logout: () => void;
 }
 
