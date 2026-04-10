@@ -13,9 +13,10 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/login", "/dashboard"],
+  matcher: ["/", "/login", "/dashboard"],
 };
