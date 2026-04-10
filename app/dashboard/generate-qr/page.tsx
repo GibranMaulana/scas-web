@@ -89,7 +89,9 @@ export default function Page() {
               bgColor="#F3F4F6"
               fgColor="#111827"
               level="M"
+              marginSize={4}
             />
+            <p className="text-black">{timeLeft}</p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-gray-400">
