@@ -13,7 +13,6 @@ export default function Features() {
         </div>
         
         <div className="relative aspect-square w-full bg-white/5 rounded-2xl flex items-center justify-center overflow-hidden border border-white/10 group">
-           {/* Abstract QR visual */}
            <div className="grid grid-cols-4 gap-2 opacity-20 group-hover:opacity-40 transition-opacity">
               {[...Array(16)].map((_, i) => (
                 <div key={i} className={`w-8 h-8 ${i % 3 === 0 ? 'bg-white' : 'border border-white'}`}></div>
@@ -33,7 +32,6 @@ export default function Features() {
         </div>
 
         <div className="relative aspect-[4/5] w-full bg-white/5 rounded-2xl flex items-center justify-center overflow-hidden border border-white/10 group">
-           {/* Geometric abstract visual */}
            <div className="w-48 h-48 border border-white/20 rotate-45 group-hover:rotate-90 transition-transform duration-1000"></div>
            <div className="absolute w-32 h-32 border border-white/40 -rotate-45 group-hover:-rotate-90 transition-transform duration-1000"></div>
            <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background"></div>
