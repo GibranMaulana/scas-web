@@ -1,11 +1,12 @@
-// File: src/app/lecturer/scanner/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import api from "@/lib/axios";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function LecturerScannerPage() {
+  const user = useAuthStore((state) => state.user);
   const [status, setStatus] = useState<
     "idle" | "scanning" | "verifying" | "success" | "error"
   >("idle");
@@ -15,23 +16,34 @@ export default function LecturerScannerPage() {
     time: string;
   } | null>(null);
 
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
   useEffect(() => {
-    if (status !== "idle" && status !== "scanning") return;
+    if (status !== "scanning") return;
 
     const scanner = new Html5QrcodeScanner(
       "reader",
       {
         fps: 10,
         qrbox: { width: 250, height: 250 },
-        supportedScanTypes: [0, 1],
+        supportedScanTypes: [0], // QR only
       },
       false,
     );
 
     const onScanSuccess = async (decodedText: string) => {
-      scanner.clear();
+      try {
+        await scanner.clear();
+      } catch (e) {
+        console.error("Failed to clear scanner", e);
+      }
+
       setStatus("verifying");
-      setMessage("Decrypting and verifying attendance...");
+      setMessage("Decrypting and verifying identity...");
 
       try {
         const res = await api.post("/attendance/verify", {
@@ -48,22 +60,25 @@ export default function LecturerScannerPage() {
         setStatus("error");
         setMessage(
           error.response?.data?.message ||
-            "Verification failed. Please try again.",
+            "Verification failed. Integrity check failed.",
         );
       }
     };
 
     const onScanFailure = (error: unknown) => {
-      //TODO: handle ts
+      // TODO: handle nanti
     };
 
     scanner.render(onScanSuccess, onScanFailure);
-    setStatus("scanning");
 
     return () => {
       scanner.clear().catch((e) => console.error("Failed to clear scanner", e));
     };
-  }, []);
+  }, [status]);
+
+  const handleStartScanner = () => {
+    setStatus("scanning");
+  };
 
   const handleScanNext = () => {
     setStatus("idle");
@@ -71,77 +86,126 @@ export default function LecturerScannerPage() {
     setStudentData(null);
   };
 
+  if (!isClient) return null;
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center pt-10 px-4">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">
-        Lecturer Scanner
-      </h1>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground px-6 py-24 selection:bg-white selection:text-black overflow-hidden relative">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 blur-[120px] pointer-events-none">
+        <div className="h-[600px] w-[600px] rounded-full bg-white"></div>
+      </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md flex flex-col items-center">
-        {(status === "idle" || status === "scanning") && (
-          <div
-            id="reader"
-            className="w-full overflow-hidden rounded-lg border-2 border-gray-200"
-          ></div>
-        )}
+      <div className="z-10 w-full max-w-xl flex flex-col items-center">
+        <header className="text-center mb-16">
+          <span className="font-days text-sm uppercase text-white/40 tracking-[0.3em] mb-4 block">
+            Security Protocol
+          </span>
+          <h1 className="font-days text-4xl md:text-6xl uppercase tracking-tighter leading-none mb-6">
+            Verify <br /> Identity.
+          </h1>
+          <p className="font-abel text-lg opacity-60 uppercase tracking-widest max-w-xs mx-auto">
+            Authorized scanner for attendance verification.
+          </p>
+        </header>
 
-        {status === "verifying" && (
-          <div className="py-12 flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-600 font-medium text-center">{message}</p>
-          </div>
-        )}
+        <div className="relative group w-full flex flex-col items-center">
+          <div className="absolute -inset-4 border border-white/10 rounded-[2rem] pointer-events-none transition-all duration-700 group-hover:border-white/20"></div>
 
-        {status === "success" && (
-          <div className="py-8 flex flex-col items-center text-center w-full">
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mb-4 shadow-sm">
-              ✓
-            </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-1">
-              Attendance Verified!
-            </h2>
+          <div className="relative w-full bg-black/40 backdrop-blur-sm border border-white/5 p-4 rounded-2xl shadow-2xl overflow-hidden min-h-[300px] flex flex-col items-center justify-center">
+            {status === "idle" && (
+              <div className="flex flex-col items-center py-12 text-center">
+                <div className="w-16 h-16 border border-white/10 rounded-full flex items-center justify-center mb-6">
+                  <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                </div>
+                <button
+                  onClick={handleStartScanner}
+                  className="font-days text-xs uppercase tracking-[0.2em] bg-white text-black px-8 py-4 rounded-full hover:scale-105 transition-transform"
+                >
+                  Initiate Scanner
+                </button>
+              </div>
+            )}
 
-            {studentData && (
-              <div className="bg-gray-50 w-full p-4 rounded-xl border border-gray-100 mt-4 mb-6">
-                <p className="text-sm text-gray-500">Student</p>
-                <p className="font-semibold text-lg text-gray-800">
-                  {studentData.name}
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Recorded at: {studentData.time}
+            {status === "scanning" && (
+              <div className="w-full">
+                <div
+                  id="reader"
+                  className="w-full rounded-xl overflow-hidden [&>div]:!border-none [&_video]:rounded-xl"
+                ></div>
+                <button
+                  onClick={() => setStatus("idle")}
+                  className="mt-4 w-full text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity"
+                >
+                  Cancel Scan
+                </button>
+              </div>
+            )}
+
+            {status === "verifying" && (
+              <div className="py-12 flex flex-col items-center gap-6">
+                <div className="relative w-12 h-12">
+                  <div className="absolute inset-0 border-2 border-white/10 rounded-full"></div>
+                  <div className="absolute inset-0 border-2 border-t-white rounded-full animate-spin"></div>
+                </div>
+                <p className="font-abel text-sm uppercase tracking-widest opacity-60 animate-pulse">
+                  {message}
                 </p>
               </div>
             )}
 
-            <button
-              onClick={handleScanNext}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md"
-            >
-              Scan Next Student
-            </button>
-          </div>
-        )}
+            {status === "success" && (
+              <div className="py-8 flex flex-col items-center text-center w-full px-4">
+                <div className="w-16 h-16 bg-white text-black rounded-full flex items-center justify-center text-2xl mb-6 shadow-2xl">
+                  ✓
+                </div>
+                <h2 className="font-days text-2xl uppercase tracking-tighter mb-4">
+                  Verified.
+                </h2>
 
-        {status === "error" && (
-          <div className="py-8 flex flex-col items-center text-center w-full">
-            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mb-4 shadow-sm">
-              ✗
-            </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">
-              Scan Failed
-            </h2>
-            <p className="text-red-600 bg-red-50 px-4 py-3 rounded-lg border border-red-100 mb-6 w-full text-sm">
-              {message}
-            </p>
-            <button
-              onClick={handleScanNext}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-xl transition-all"
-            >
-              Try Again
-            </button>
+                {studentData && (
+                  <div className="w-full p-6 rounded-xl border border-white/10 bg-white/5 mb-8">
+                    <span className="font-days text-[10px] uppercase text-white/30 tracking-widest block mb-2">
+                      Subject Identified
+                    </span>
+                    <p className="font-days text-xl uppercase tracking-tight text-white mb-2">
+                      {studentData.name}
+                    </p>
+                    <p className="font-abel text-[10px] uppercase tracking-widest opacity-40">
+                      Timestamp: {studentData.time}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleScanNext}
+                  className="w-full bg-white text-black font-days text-xs uppercase tracking-widest py-4 rounded-full hover:scale-[1.02] transition-transform"
+                >
+                  Continue Protocol
+                </button>
+              </div>
+            )}
+
+            {status === "error" && (
+              <div className="py-8 flex flex-col items-center text-center w-full px-4">
+                <div className="w-16 h-16 border border-red-500/50 text-red-500 rounded-full flex items-center justify-center text-2xl mb-6">
+                  ✕
+                </div>
+                <h2 className="font-days text-2xl uppercase tracking-tighter mb-2">
+                  Access Denied.
+                </h2>
+                <p className="font-abel text-xs uppercase tracking-widest text-red-400 opacity-80 mb-8 max-w-xs">
+                  {message}
+                </p>
+                <button
+                  onClick={handleScanNext}
+                  className="w-full border border-white/10 hover:bg-white/5 text-white font-days text-xs uppercase tracking-widest py-4 rounded-full transition-all"
+                >
+                  Retry Scan
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

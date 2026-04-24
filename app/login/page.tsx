@@ -1,6 +1,9 @@
 "use client";
 
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
+import LoginForm from "@/components/auth/LoginForm";
+import OtpForm from "@/components/auth/OtpForm";
+import { useSyncExternalStore } from "react";
 
 export default function Page() {
   const {
@@ -15,60 +18,33 @@ export default function Page() {
     otpError,
   } = useGoogleAuth();
 
-  if (isOtp) {
-    return (
-      <form onSubmit={handleVerifyDevice} className="flex flex-col gap-4">
-        <div className="text-center mb-4">
-          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
-            🛡️
-          </div>
-          <h2 className="text-xl font-bold text-gray-800">
-            New Device Detected
-          </h2>
-          <p className="text-sm text-gray-500 mt-2">
-            We sent a 6-digit code to <br />
-            <span className="font-semibold text-gray-700">{email}</span>
-          </p>
-        </div>
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
-        <input
-          type="text"
-          maxLength={6}
-          value={otpCode}
-          onChange={(e) => setOtpCode(e.target.value)}
-          placeholder="000000"
-          className="border p-3 rounded bg-gray-50 text-center text-2xl tracking-widest font-mono focus:ring-2 focus:ring-blue-500"
-          required
-        />
+  if (!isClient) return null;
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="bg-green-600 hover:bg-green-700 text-white p-3 rounded font-semibold mt-2"
-        >
-          {isLoading ? "Verifying..." : "Verify & Continue"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setIsOtp(false)}
-          className="text-sm text-blue-500 mt-2 hover:underline"
-        >
-          Back to login
-        </button>
-        {otpError !== "" && <p>{otpError}</p>}
-      </form>
-    );
-  }
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <button
-        onClick={() => handleLogin()}
-        className="p-3 bg-amber-100 text-black"
-        disabled={isLoading}
-      >
-        {isLoading ? "Memproses..." : "Login dengan Google SSO"}
-      </button>
-    </div>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground px-6 py-24 selection:bg-white selection:text-black overflow-hidden relative">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 blur-[120px] pointer-events-none">
+        <div className="h-[600px] w-[600px] rounded-full bg-white"></div>
+      </div>
+
+      {isOtp ? (
+        <OtpForm
+          email={email}
+          otpCode={otpCode}
+          setOtpCode={setOtpCode}
+          onSubmit={handleVerifyDevice}
+          onBack={() => setIsOtp(false)}
+          isLoading={isLoading}
+          otpError={otpError}
+        />
+      ) : (
+        <LoginForm onLogin={handleLogin} isLoading={isLoading} />
+      )}
+    </main>
   );
 }
